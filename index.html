@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Character Thesaurus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1E9D8;
+    --paper-dark:#E4D8BC;
+    --paper-card:#F8F2E4;
+    --ink:#2B2418;
+    --ink-soft:#6B6046;
+    --moss:#445939;
+    --moss-dark:#2E3D26;
+    --rust:#8B4226;
+    --rust-dark:#5C2C18;
+    --gold:#A67C3D;
+    --line:#CBBC93;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top left, rgba(166,124,61,0.07), transparent 55%),
+      radial-gradient(ellipse at bottom right, rgba(68,89,57,0.06), transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Source Serif 4', Georgia, serif;
+    min-height:100vh;
+  }
+  .app{
+    display:grid;
+    grid-template-columns:250px 1fr;
+    min-height:100vh;
+  }
+  .sidebar{
+    background:var(--paper-dark);
+    border-right:1px solid var(--line);
+    padding:28px 16px 16px;
+    display:flex;
+    flex-direction:column;
+  }
+  .brand{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:1.05rem;
+    letter-spacing:.02em;
+    color:var(--moss-dark);
+    margin:0 8px 4px;
+  }
+  .brand-sub{
+    font-family:'Space Mono', monospace;
+    font-size:.62rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:0 8px 22px;
+  }
+  .save-status{
+    font-family:'Space Mono', monospace;
+    font-size:.6rem;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin:0 8px 16px;
+    color:var(--ink-soft);
+  }
+  .save-status.ok{ color:var(--moss); }
+  .save-status.err{ color:var(--rust); }
+  .char-list{
+    list-style:none;
+    margin:0; padding:0;
+    display:flex; flex-direction:column; gap:4px;
+    overflow-y:auto;
+    flex:1;
+  }
+  .char-item{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:6px;
+    padding:9px 10px;
+    border-radius:3px;
+    cursor:pointer;
+    font-size:.92rem;
+    color:var(--ink-soft);
+    border-left:3px solid transparent;
+    transition:background .12s ease, color .12s ease;
+  }
+  .char-item:hover{ background:rgba(68,89,57,0.08); color:var(--ink); }
+  .char-item.active{
+    background:var(--paper-card);
+    color:var(--moss-dark);
+    border-left-color:var(--moss);
+    font-weight:600;
+    box-shadow:0 1px 2px rgba(43,36,24,0.08);
+  }
+  .char-item .del-x{
+    opacity:0; font-family:'Space Mono',monospace; font-size:.85rem; color:var(--rust);
+    padding:0 4px;
+  }
+  .char-item:hover .del-x{ opacity:.65; }
+  .char-item .del-x:hover{ opacity:1; }
+  .add-char-btn{
+    margin-top:14px;
+    border:1px dashed var(--gold);
+    background:transparent;
+    color:var(--moss-dark);
+    font-family:'Space Mono',monospace;
+    font-size:.72rem;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:10px;
+    border-radius:3px;
+    cursor:pointer;
+    transition:background .12s;
+  }
+  .add-char-btn:hover{ background:rgba(166,124,61,0.12); }
+  .main{
+    padding:36px 48px 80px;
+    max-width:920px;
+  }
+  .empty-state, .load-error{
+    margin-top:80px;
+    text-align:center;
+    color:var(--ink-soft);
+  }
+  .load-error{ color:var(--rust); }
+  .name-row{
+    display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .name-input{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:2.3rem;
+    color:var(--ink);
+    background:transparent;
+    border:none;
+    border-bottom:1px solid transparent;
+    padding:2px 0;
+    min-width:120px;
+  }
+  .name-input:focus{ outline:none; border-bottom:1px solid var(--gold); }
+  .specimen-no{
+    font-family:'Space Mono',monospace;
+    font-size:.68rem;
+    color:var(--gold);
+    letter-spacing:.1em;
+  }
+  .question-tag{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:10px 16px 10px 14px;
+    margin:14px 0 28px;
+    transform:rotate(-0.4deg);
+    box-shadow:1px 2px 4px rgba(43,36,24,0.08);
+  }
+  .question-tag::before{
+    content:'';
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--rust);
+    box-shadow:0 0 0 2px rgba(139,66,38,0.2);
+  }
+  .question-label{
+    font-family:'Space Mono',monospace;
+    font-size:.62rem;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .question-input{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:500;
+    font-size:1.05rem;
+    color:var(--moss-dark);
+    background:transparent;
+    border:none;
+    flex:1;
+    min-width:180px;
+  }
+  .question-input:focus{ outline:none; }
+  .section-head{
+    display:flex; align-items:center; gap:10px;
+    margin:36px 0 14px;
+  }
+  .section-head h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:1.15rem;
+    margin:0;
+    color:var(--ink);
+  }
+  .section-head .rule{ flex:1; height:1px; background:var(--line); }
+  .section-note{
+    font-family:'Space Mono',monospace;
+    font-size:.68rem;
+    color:var(--ink-soft);
+    margin:-8px 0 16px;
+  }
+  .perception-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+  }
+  .perception-card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-top:3px solid var(--moss);
+    border-radius:2px;
+    padding:14px 16px;
+  }
+  .perception-card.ignore{ border-top-color:var(--gold); }
+  .perception-card.misunderstand{ border-top-color:var(--rust); }
+  .perception-card label{
+    display:block;
+    font-family:'Space Mono',monospace;
+    font-size:.62rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+  .perception-card textarea{
+    width:100%;
+    border:none;
+    background:transparent;
+    font-family:'Source Serif 4', serif;
+    font-size:.9rem;
+    color:var(--ink);
+    resize:vertical;
+    min-height:64px;
+    line-height:1.5;
+  }
+  .perception-card textarea:focus{ outline:none; }
+  .categories{ display:flex; flex-direction:column; gap:14px; }
+  .category-card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:16px 18px;
+  }
+  .category-head{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .category-name{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-style:italic;
+    font-size:1.02rem;
+    color:var(--moss-dark);
+    background:transparent;
+    border:none;
+    border-bottom:1px dotted transparent;
+    flex:1;
+  }
+  .category-name:focus{ outline:none; border-bottom:1px dotted var(--gold); }
+  .cat-del{
+    background:none; border:none; cursor:pointer;
+    color:var(--ink-soft);
+    font-family:'Space Mono',monospace;
+    font-size:.7rem;
+  }
+  .cat-del:hover{ color:var(--rust); }
+  .word-chips{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:12px; }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:5px 9px;
+    font-size:.86rem;
+    color:var(--ink);
+  }
+  .chip .x{ cursor:pointer; color:var(--ink-soft); font-family:'Space Mono',monospace; font-size:.72rem; }
+  .chip .x:hover{ color:var(--rust); }
+  .word-add-row{ display:flex; gap:8px; }
+  .word-add-row input{
+    flex:1;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:7px 10px;
+    font-family:'Source Serif 4', serif;
+    font-size:.88rem;
+    color:var(--ink);
+  }
+  .word-add-row input:focus{ outline:none; border-color:var(--gold); }
+  .word-add-row button, .cat-add-btn{
+    background:var(--moss);
+    color:var(--paper-card);
+    border:none;
+    border-radius:2px;
+    padding:7px 14px;
+    font-family:'Space Mono',monospace;
+    font-size:.7rem;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    cursor:pointer;
+  }
+  .word-add-row button:hover, .cat-add-btn:hover{ background:var(--moss-dark); }
+  .cat-add-btn{
+    align-self:flex-start;
+    background:transparent;
+    border:1px dashed var(--moss);
+    color:var(--moss-dark);
+  }
+  .cat-add-btn:hover{ background:rgba(68,89,57,0.08); }
+  .worst-box{
+    background:linear-gradient(180deg, #2B2418, #241E15);
+    border-radius:3px;
+    padding:20px 22px;
+    color:#E9DEC4;
+  }
+  .worst-box .section-note{ color:#B7A97F; }
+  .worst-box .word-chips .chip{ background:#3A2E1F; border:1px solid #5C4A30; color:#E9C9AE; }
+  .worst-box .word-chips .chip .x{ color:#B7A97F; }
+  .worst-box .word-chips .chip .x:hover{ color:#D97757; }
+  .worst-box .word-add-row input{ background:#3A2E1F; border:1px solid #5C4A30; color:#E9DEC4; }
+  .worst-box .word-add-row button{ background:var(--rust); color:#F1E9D8; }
+  .worst-box .word-add-row button:hover{ background:var(--rust-dark); }
+  .footer-hint{
+    margin-top:44px;
+    font-family:'Space Mono',monospace;
+    font-size:.66rem;
+    color:var(--ink-soft);
+    text-align:center;
+  }
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <p class="brand">Character Thesaurus</p>
+    <p class="brand-sub">Field notes on perception</p>
+    <p class="save-status" id="saveStatus">loading...</p>
+    <ul class="char-list" id="charList"></ul>
+    <button class="add-char-btn" onclick="addCharacter()">+ New Character</button>
+  </div>
+  <div class="main" id="main"></div>
+</div>
+
+<script>
+let characters = {};
+let order = [];
+let currentId = null;
+
+function slug(name){
+  return name.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || ('char-' + Date.now());
+}
+
+function blankCharacter(name){
+  const base = slug(name);
+  return {
+    id: characters[base] ? base + '-' + Date.now() : base,
+    name: name,
+    coreQuestion: '',
+    notices: '',
+    ignores: '',
+    misunderstands: '',
+    categories: [],
+    worstWords: []
+  };
+}
+
+const SEED = [
+  { name:'Maeren', coreQuestion:'How is this connected?', notices:'Relationships first — roots, families, history, love, loss, the ties between things.', ignores:'Political maneuvering happening around her.', misunderstands:'How much power she actually has.', categories:[{name:'Connections',words:[]},{name:'Relationships',words:[]}], worstWords:[] },
+  { name:'Brynna', coreQuestion:'Is this fair?', notices:'Injustice — duty, responsibility, protection.', ignores:'Diplomacy.', misunderstands:'How complicated people are.', categories:[{name:'Justice',words:[]},{name:'Duty',words:[]}], worstWords:[] },
+  { name:'Aurelian', coreQuestion:'Why is this happening?', notices:'Patterns — classification, biology, mythology, cause.', ignores:'Manipulation happening in real time.', misunderstands:'His own influence.', categories:[{name:'Patterns',words:[]},{name:'Cause',words:[]}], worstWords:[] },
+  { name:'Rían', coreQuestion:'What can this become?', notices:'Potential for use — weapon, tool, escape, protection.', ignores:'', misunderstands:'', categories:[{name:'Utility',words:[]}], worstWords:[] },
+  { name:'Orli', coreQuestion:'Is this safe, or is it dangerous?', notices:'The world sorted into safe and dangerous.', ignores:'', misunderstands:'', categories:[{name:'Safe',words:[]},{name:'Dangerous',words:[]}], worstWords:[] },
+  { name:'Cordova', coreQuestion:'Who benefits?', notices:'Who gains, who loses, who moves because of this.', ignores:'', misunderstands:'', categories:[{name:'Leverage',words:[]}], worstWords:[] },
+  { name:'Vaela', coreQuestion:'Who are you, really?', notices:'What lies dormant beneath facades — masks, hope, quiet rebellion.', ignores:'', misunderstands:'', categories:[{name:'Masks',words:[]},{name:'Hidden truth',words:[]}], worstWords:[] },
+  { name:'Cydar', coreQuestion:'Is life flourishing here?', notices:'Health in all things — soil, rivers, conversations, communities, souls.', ignores:'', misunderstands:'', categories:[{name:'Ecology',words:[]},{name:'Health',words:[]}], worstWords:[] },
+  { name:'Sigryn', coreQuestion:'What is this capable of?', notices:'Value and potential in everything, if utilized properly.', ignores:'', misunderstands:'', categories:[{name:'Potential',words:[]}], worstWords:[] }
+];
+
+function setStatus(text, cls){
+  const el = document.getElementById('saveStatus');
+  el.textContent = text;
+  el.className = 'save-status' + (cls ? ' ' + cls : '');
+}
+
+async function loadAll(){
+  setStatus('loading...');
+  try{
+    const res = await fetch('/api/state');
+    if(!res.ok){
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || ('HTTP ' + res.status));
+    }
+    const state = await res.json();
+    if(state && state.order && state.order.length){
+      characters = state.characters;
+      order = state.order;
+    } else {
+      order = [];
+      characters = {};
+      for(const s of SEED){
+        const c = blankCharacter(s.name);
+        Object.assign(c, s);
+        characters[c.id] = c;
+        order.push(c.id);
+      }
+      await saveState();
+    }
+    currentId = order[0] || null;
+    setStatus('saved', 'ok');
+    renderSidebar();
+    renderMain();
+  }catch(err){
+    console.error(err);
+    document.getElementById('main').innerHTML =
+      '<div class="load-error"><p><strong>Could not reach the database.</strong></p>' +
+      '<p>' + escapeHtml(err.message) + '</p>' +
+      '<p>Double-check SUPABASE_URL and SUPABASE_KEY are set correctly, and that the app_state table exists.</p></div>';
+    setStatus('connection error', 'err');
+  }
+}
+
+async function saveState(){
+  setStatus('saving...');
+  try{
+    const res = await fetch('/api/state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ characters, order })
+    });
+    if(!res.ok) throw new Error('save failed');
+    setStatus('saved', 'ok');
+  }catch(err){
+    console.error(err);
+    setStatus('save failed — check connection', 'err');
+  }
+}
+
+function renderSidebar(){
+  const list = document.getElementById('charList');
+  list.innerHTML = '';
+  order.forEach(id => {
+    const c = characters[id];
+    const li = document.createElement('li');
+    li.className = 'char-item' + (id === currentId ? ' active' : '');
+    li.innerHTML = `<span onclick="selectCharacter('${id}')" style="flex:1">${escapeHtml(c.name || 'Unnamed')}</span><span class="del-x" onclick="deleteCharacter('${id}', event)">✕</span>`;
+    list.appendChild(li);
+  });
+}
+
+function escapeHtml(s){
+  return (s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function selectCharacter(id){
+  currentId = id;
+  renderSidebar();
+  renderMain();
+}
+
+async function addCharacter(){
+  const c = blankCharacter('New Character');
+  characters[c.id] = c;
+  order.push(c.id);
+  currentId = c.id;
+  await saveState();
+  renderSidebar();
+  renderMain();
+}
+
+async function deleteCharacter(id, evt){
+  if(evt) evt.stopPropagation();
+  if(!confirm('Remove ' + (characters[id].name || 'this character') + ' and everything catalogued for them?')) return;
+  order = order.filter(x => x !== id);
+  delete characters[id];
+  await saveState();
+  currentId = order[0] || null;
+  renderSidebar();
+  renderMain();
+}
+
+function renderMain(){
+  const main = document.getElementById('main');
+  if(!currentId){
+    main.innerHTML = '<div class="empty-state"><p>No characters yet.</p><p>Start with the + New Character button.</p></div>';
+    return;
+  }
+  const c = characters[currentId];
+  const idx = order.indexOf(currentId) + 1;
+
+  main.innerHTML = `
+    <div class="name-row">
+      <input class="name-input" value="${escapeHtml(c.name)}" onchange="updateField('name', this.value)">
+      <span class="specimen-no">SPECIMEN NO. ${String(idx).padStart(2,'0')}</span>
+    </div>
+
+    <div class="question-tag">
+      <span class="question-label">Always asking</span>
+      <input class="question-input" placeholder="What question does this character instinctively ask?" value="${escapeHtml(c.coreQuestion)}" onchange="updateField('coreQuestion', this.value)">
+    </div>
+
+    <div class="section-head"><h2>How she perceives reality</h2><div class="rule"></div></div>
+    <div class="perception-grid">
+      <div class="perception-card">
+        <label>Notices first</label>
+        <textarea onchange="updateField('notices', this.value)" placeholder="What does this character register before anything else?">${escapeHtml(c.notices)}</textarea>
+      </div>
+      <div class="perception-card ignore">
+        <label>Ignores</label>
+        <textarea onchange="updateField('ignores', this.value)" placeholder="What passes right by them?">${escapeHtml(c.ignores)}</textarea>
+      </div>
+      <div class="perception-card misunderstand">
+        <label>Misunderstands</label>
+        <textarea onchange="updateField('misunderstands', this.value)" placeholder="What do they consistently get wrong about themselves or others?">${escapeHtml(c.misunderstands)}</textarea>
+      </div>
+    </div>
+
+    <div class="section-head"><h2>Word collection</h2><div class="rule"></div></div>
+    <p class="section-note">Catalogue every word you find for how this character sees the world — one card per category.</p>
+    <div class="categories" id="categories"></div>
+    <button class="cat-add-btn" style="margin-top:12px" onclick="addCategory()">+ New Category</button>
+
+    <div class="section-head"><h2>At their worst</h2><div class="rule"></div></div>
+    <div class="worst-box">
+      <p class="section-note">The antithesis — words for what happens when this character's blind spot wins, or what they become at their least self.</p>
+      <div class="word-chips" id="worstChips"></div>
+      <div class="word-add-row">
+        <input id="worstInput" placeholder="add a word or phrase..." onkeydown="if(event.key==='Enter') addWorstWord()">
+        <button onclick="addWorstWord()">Add</button>
+      </div>
+    </div>
+
+    <p class="footer-hint">saved to your database automatically</p>
+  `;
+
+  renderCategories();
+  renderWorstChips();
+}
+
+function renderCategories(){
+  const wrap = document.getElementById('categories');
+  const c = characters[currentId];
+  wrap.innerHTML = '';
+  c.categories.forEach((cat, ci) => {
+    const card = document.createElement('div');
+    card.className = 'category-card';
+    card.innerHTML = `
+      <div class="category-head">
+        <input class="category-name" value="${escapeHtml(cat.name)}" onchange="renameCategory(${ci}, this.value)">
+        <button class="cat-del" onclick="removeCategory(${ci})">remove category ✕</button>
+      </div>
+      <div class="word-chips" id="chips-${ci}"></div>
+      <div class="word-add-row">
+        <input id="input-${ci}" placeholder="add a word..." onkeydown="if(event.key==='Enter') addWord(${ci})">
+        <button onclick="addWord(${ci})">Add</button>
+      </div>
+    `;
+    wrap.appendChild(card);
+    const chipsEl = card.querySelector(`#chips-${ci}`);
+    cat.words.forEach((w, wi) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.innerHTML = `${escapeHtml(w)} <span class="x" onclick="removeWord(${ci}, ${wi})">✕</span>`;
+      chipsEl.appendChild(chip);
+    });
+  });
+}
+
+function renderWorstChips(){
+  const c = characters[currentId];
+  const chipsEl = document.getElementById('worstChips');
+  chipsEl.innerHTML = '';
+  c.worstWords.forEach((w, wi) => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `${escapeHtml(w)} <span class="x" onclick="removeWorstWord(${wi})">✕</span>`;
+    chipsEl.appendChild(chip);
+  });
+}
+
+async function updateField(field, value){
+  characters[currentId][field] = value;
+  await saveState();
+  if(field === 'name') renderSidebar();
+}
+
+async function addCategory(){
+  characters[currentId].categories.push({ name:'New Category', words:[] });
+  await saveState();
+  renderCategories();
+}
+async function renameCategory(ci, value){
+  characters[currentId].categories[ci].name = value;
+  await saveState();
+}
+async function removeCategory(ci){
+  characters[currentId].categories.splice(ci, 1);
+  await saveState();
+  renderCategories();
+}
+async function addWord(ci){
+  const input = document.getElementById('input-' + ci);
+  const val = input.value.trim();
+  if(!val) return;
+  characters[currentId].categories[ci].words.push(val);
+  input.value = '';
+  await saveState();
+  renderCategories();
+}
+async function removeWord(ci, wi){
+  characters[currentId].categories[ci].words.splice(wi, 1);
+  await saveState();
+  renderCategories();
+}
+async function addWorstWord(){
+  const input = document.getElementById('worstInput');
+  const val = input.value.trim();
+  if(!val) return;
+  characters[currentId].worstWords.push(val);
+  input.value = '';
+  await saveState();
+  renderWorstChips();
+}
+async function removeWorstWord(wi){
+  characters[currentId].worstWords.splice(wi, 1);
+  await saveState();
+  renderWorstChips();
+}
+
+loadAll();
+</script>
+</body>
+</html>
